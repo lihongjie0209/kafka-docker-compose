@@ -1,0 +1,102 @@
+version: '3.8'
+
+services:
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    ports:
+      - "9092:9092"
+      - "9093:9093"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: broker,controller
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,CONTROLLER://0.0.0.0:9094,PLAINTEXT_HOST://0.0.0.0:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
+      KAFKA_CONTROLLER_QUORUM_VOTERS: 1@kafka:9094
+      KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
+      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
+      KAFKA_LOG_DIRS: /tmp/kraft-combined-logs
+      CLUSTER_ID: MkU3OEVBNTcwNTJENDM2Qk
+    networks:
+      - kafka-doris-network
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-broker-api-versions --bootstrap-server localhost:9092 || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  doris-fe:
+    image: apache/doris:2.1.0-fe-x86_64
+    container_name: doris-fe
+    ports:
+      - "8030:8030"  # HTTP 端口
+      - "9030:9030"  # MySQL 协议端口
+    environment:
+      FE_SERVERS: fe1:doris-fe:9010
+      FE_ID: 1
+    volumes:
+      - doris-fe-meta:/opt/apache-doris/fe/doris-meta
+      - doris-fe-log:/opt/apache-doris/fe/log
+    networks:
+      - kafka-doris-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8030/api/bootstrap || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  doris-be:
+    image: apache/doris:2.1.0-be-x86_64
+    container_name: doris-be
+    depends_on:
+      doris-fe:
+        condition: service_healthy
+    ports:
+      - "8040:8040"  # HTTP 端口
+      - "9060:9060"  # Heartbeat 端口
+    environment:
+      FE_SERVERS: fe1:doris-fe:9010
+      BE_ADDR: doris-be:9050
+    volumes:
+      - doris-be-storage:/opt/apache-doris/be/storage
+      - doris-be-log:/opt/apache-doris/be/log
+    networks:
+      - kafka-doris-network
+    healthcheck:
+      test: ["CMD-SHELL", "curl -f http://localhost:8040/api/health || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    depends_on:
+      kafka:
+        condition: service_healthy
+    ports:
+      - "8080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: local
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
+      DYNAMIC_CONFIG_ENABLED: "true"
+    networks:
+      - kafka-doris-network
+
+networks:
+  kafka-doris-network:
+    driver: bridge
+
+volumes:
+  doris-fe-meta:
+    driver: local
+  doris-fe-log:
+    driver: local
+  doris-be-storage:
+    driver: local
+  doris-be-log:
+    driver: local

@@ -41,6 +41,25 @@ docker compose up -d
 
 详细说明请查看 [three-nodes/README.md](three-nodes/README.md)
 
+## Kafka + Doris 集成环境
+
+位于 `kafka-doris/` 目录，包含 Kafka 和 Apache Doris 数据库的集成环境。
+
+### 快速启动
+
+```bash
+cd kafka-doris
+docker compose up -d
+```
+
+### 访问
+
+- **Kafka UI**: http://localhost:8080
+- **Doris Web UI**: http://localhost:8030
+- **Doris MySQL**: localhost:9030 (用户名: root, 密码: 空)
+
+详细说明请查看 [kafka-doris/README.md](kafka-doris/README.md)
+
 ## 特性
 
 - ✅ KRaft 模式（Kafka 3.0+）
