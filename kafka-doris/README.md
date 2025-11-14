@@ -35,8 +35,7 @@ docker compose ps
 - 用途: 管理 Kafka topics、查看消息
 
 ### Doris Web UI
-- FE UI: http://localhost:8030
-- 备用 UI: http://localhost:8031
+- URL: http://localhost:8030
 - 默认账号: root
 - 默认密码: (空)
 
