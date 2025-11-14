@@ -87,6 +87,20 @@ services:
     networks:
       - kafka-doris-network
 
+  doris-ui:
+    image: apache/doris:2.1.0-fe-x86_64
+    container_name: doris-ui
+    depends_on:
+      doris-fe:
+        condition: service_healthy
+    ports:
+      - "8031:8030"
+    environment:
+      FE_SERVERS: fe1:doris-fe:9010
+    command: ["/bin/bash", "-c", "tail -f /dev/null"]
+    networks:
+      - kafka-doris-network
+
 networks:
   kafka-doris-network:
     driver: bridge
